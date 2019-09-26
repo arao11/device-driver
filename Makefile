@@ -1,9 +1,13 @@
-obj-m := simple_buffer.o
+obj-m	:= testproc.o
 
-all:
-		make -C /lib/modules/$(shell uname -r)/build M=$(PWD) modules
-		#make -C /lib/modules/`uname -r`/build M=$PWD modules_install
+KERNELDIR ?= /lib/modules/$(shell uname -r)/build
+PWD       := $(shell pwd)
+
+all: default
+
+default:
+	$(MAKE) -C $(KERNELDIR) M=$(PWD) modules
+
 
 clean:
-		make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
-
+	rm -rf *.o *~ core .depend .*.cmd *.ko *.mod.c .tmp_versions

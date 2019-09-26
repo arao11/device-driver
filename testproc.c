@@ -13,7 +13,7 @@ MODULE_AUTHOR("Joshin Kariyathu");
 // Seting the buffer size to 1024;
 #define BUFSIZE  1024
 // This is the name of the proc file
-#define PROCFS_N 		"buffer1k"
+#define PROCFS_N 		"buff"
 
 /**
  * The buffer used to store character for this module

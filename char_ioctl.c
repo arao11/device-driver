@@ -3,6 +3,7 @@
 #include <linux/fs.h>
 #include <linux/uaccess.h>
 
+#include "chardev.h"
 MODULE_LICENSE("Dual BSD/GPL");
 
 /* Function prototypes */

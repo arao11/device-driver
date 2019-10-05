@@ -1,10 +1,18 @@
 # object files
 *.o
+*.o.*
 *.ko
 *.out
 *.cmd
+*.mod.o
+
 
 # vim tmp files
 *~
 *.swp
 *.swo
+
+Modules.symvers
+modules.builtin
+modules.order
+

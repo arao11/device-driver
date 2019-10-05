@@ -24,7 +24,7 @@ if [[ $ret -ne 0 ]]; then
 fi
 
 majorNumber=`dmesg | grep Major | tail -1 | awk -F ": " '{print $2}'`
-if [[ ! -f "$FILE" ]] && [[ -z "$majorNumber" ]]; then
+if [[ ! -f "$FILE" ]] && [[ ! -z "$majorNumber" ]]; then
    mknod $FILE c $majorNumber 0 # 0 for minor number
 fi
 

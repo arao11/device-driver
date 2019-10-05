@@ -15,4 +15,5 @@
 Modules.symvers
 modules.builtin
 modules.order
+.tmp_versions
 

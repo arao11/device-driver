@@ -24,8 +24,12 @@ __attribute__((section("__versions"))) = {
 	{ 0x177c57ca, __VMLINUX_SYMBOL_STR(blk_queue_logical_block_size) },
 	{ 0x84daafd0, __VMLINUX_SYMBOL_STR(blk_init_queue) },
 	{ 0x7959fc3f, __VMLINUX_SYMBOL_STR(alloc_disk) },
-	{ 0x27e1a049, __VMLINUX_SYMBOL_STR(printk) },
 	{ 0x71a50dbc, __VMLINUX_SYMBOL_STR(register_blkdev) },
+	{ 0x3a7a8735, __VMLINUX_SYMBOL_STR(__blk_end_request_all) },
+	{ 0x27e1a049, __VMLINUX_SYMBOL_STR(printk) },
+	{ 0x52385726, __VMLINUX_SYMBOL_STR(__blk_end_request_cur) },
+	{ 0x69acdf38, __VMLINUX_SYMBOL_STR(memcpy) },
+	{ 0x605420f9, __VMLINUX_SYMBOL_STR(blk_fetch_request) },
 	{ 0xbdfb6dbb, __VMLINUX_SYMBOL_STR(__fentry__) },
 };
 
@@ -35,5 +39,5 @@ __attribute__((section(".modinfo"))) =
 "depends=";
 
 
-MODULE_INFO(srcversion, "8CBF58CFEE695F97FD7D122");
+MODULE_INFO(srcversion, "FE2A99F61FB2E9588AFD775");
 MODULE_INFO(rhelversion, "7.4");

@@ -7,6 +7,7 @@
 
 MODULE_LICENSE("Dual BSD/GPL");
 
+
 /* Function prototypes */
 static int block_init(void);
 static void handle_queue_request(struct request_queue *);
@@ -25,15 +26,55 @@ static struct blockDeviceStruct {
     unsigned long size;
     struct request_queue *queue;
     spinlock_t lock;
+    u8 *data;
     struct gendisk *gd;
 } blockDevice;
 
 static struct block_device_operations block_fops = {
     .owner = THIS_MODULE,
+    //TODO: implement ioctl
 };
 
 static void handle_queue_request(struct request_queue *queue) {
-    
+    struct request *rq;
+    unsigned long startPos;
+    unsigned long numberOfBytes;
+    rq = blk_fetch_request(queue);
+    while (rq != NULL) {
+        if (rq->cmd_type != REQ_TYPE_FS) {
+            printk(KERN_INFO "Skipping non FS requests\n");
+            __blk_end_request_all(rq, -EIO);
+            continue;
+        }
+        /* Starting offset position is the sector number * size of each sector */
+        startPos = blk_rq_pos(rq) * SECTOR_SIZE;
+        /* Number of bytes to copy starting from startPos is number of sectors * size of each sector */
+        numberOfBytes = blk_rq_cur_sectors(rq) * SECTOR_SIZE;
+
+        /* Check we have enough space */
+        if ((startPos + numberOfBytes) >= blockDevice.size) {
+            printk(KERN_INFO "ERROR: attempting to write/read past size %ld of disk %s\n", blockDevice.size, NAME);
+            continue;
+        }
+
+        /* Handle copying data */
+        switch (rq_data_dir(rq)) {
+            case WRITE:
+                /* memcpy data from rq buffer to device data field */
+                memcpy(blockDevice.data + startPos, rq->buffer, numberOfBytes); 
+                break;
+            case READ:
+                /* memcpy data from device data to buffer so user can read */
+                memcpy(rq->buffer, blockDevice.data + startPos, numberOfBytes);
+                break;
+            default:
+                continue;
+        }
+
+        if (! __blk_end_request_cur(rq, 0)) {
+            rq = blk_fetch_request(queue);
+        }
+    }
 }
 
 static int __init block_init(void) { 
@@ -44,6 +85,7 @@ static int __init block_init(void) {
     }
     printk(KERN_INFO "Block device %s registered successfully with Major number: %d\n", NAME, majorNumber);
 
+    blockDevice.size = SECTORS * SECTOR_SIZE;    
     blockDevice.gd = alloc_disk(PARTITIONS);
 
     if (!blockDevice.gd) {
@@ -80,7 +122,7 @@ static int __init block_init(void) {
 }
 
 /*
- * Cleanup module, and unregister char device
+ * Cleanup module, and unregister block device/free queue
  */
 static void __exit block_exit(void) {
     printk(KERN_ALERT "Exiting block device %s\n", NAME);

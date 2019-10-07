@@ -17,3 +17,6 @@ modules.builtin
 modules.order
 .tmp_versions
 
+*.tar*
+*.tgz
+

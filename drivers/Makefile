@@ -1,4 +1,4 @@
-obj-m	:= block_device.o
+obj-m	:= blockDevice.o
 
 KERNELDIR ?= /lib/modules/$(shell uname -r)/build
 PWD       := $(shell pwd)

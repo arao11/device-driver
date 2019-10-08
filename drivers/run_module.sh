@@ -27,10 +27,12 @@ while [[ "$1" != "" ]]; do
             shift
             FILE="$1"
             shift
-        "-t"|"--type")
+            ;;
+        "-t"|"-type")
             shift
             DEVICE_TYPE="$1"
             shift
+            ;;
         *)
             echo "Unrecognized option $1"
             printHelp
@@ -44,6 +46,13 @@ if [[ -z "$FILE" ]] || [[ -z "$DEVICE_TYPE" ]]; then
     printHelp
     exit -1
 fi
+echo "$DEVICE_TYPE"
+
+#if [ "$DEVICE_TYPE" != "c" ] || [ "$DEVICE_TYPE" != "b" ]; then
+    #echo "Invalid device type!"
+    #printHelp
+    #exit -1
+#fi
 
 #FILE=/dev/simpleBuffer
 
@@ -58,7 +67,7 @@ fi
 echo "Compile succeeded!"
 
 #insmod ./simple_buffer.ko
-insmod `basename {$FILE}.ko`
+insmod `basename ${FILE}.ko`
 echo "Installing module..."
 
 sleep 5

@@ -14,30 +14,32 @@ SYSCALL_DEFINE3(hello, int, key, char *, data, int, action) {
 	
     
 
-struct h_struct {
+struct mystruct {
 	int key1;
 	char *entry;
-	struct hlist_node node;
+	struct hlist_node my_hash_list;
 };
 
-struct h_struct first = {
+struct mystruct first = {
 	.key1 = key;
 	.entry = data;
-	.node = 0;
+	.my_hash_list = 0;
 };
 
 
-DECLARE_HASHTABLE(a, 3);
-hash_init(a);
+DEFINE_HASHTABLE(a, 3);
+//hash_init(a);
 
-hash_add(a, &first.next, first.data);
+hash_add(a, &first.next, first.key);
 
 int bkt;
-struct h_struct * current;
-hash_for_each_entry(a, bkt, current, next){
+struct mystruct* current;
+hash_for_each_entry(a, bkt, current, /*next*/ NULL){
 	printk(KERN_INFO "data=%d is in bucket %d\n", current->entry, bkt);
 }
 
+    return 0;
+}
 /*
 struct hlist_head {
     struct hlist_node *first;
@@ -64,5 +66,4 @@ void del_node(int data)
     }
 }
 */
-    return 0;
- }
+

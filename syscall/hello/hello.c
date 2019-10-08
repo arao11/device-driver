@@ -30,7 +30,7 @@ struct mystruct first = {
 DEFINE_HASHTABLE(a, 3);
 //hash_init(a);
 
-hash_add(a, &first.next, first.key);
+hash_add(a, &first.next, first.key1);
 
 int bkt;
 struct mystruct* current;

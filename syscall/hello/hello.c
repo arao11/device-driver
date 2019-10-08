@@ -12,35 +12,7 @@ SYSCALL_DEFINE3(hello, int, key, char *, data, int, action) {
 //Action is an int, we can do 0 for add and 1 for delete/vice versa
     printk("sys_hello : %d, %s, %d\n",key, data, action);
 	
-    
-
-struct mystruct {
-	int key1;
-	char *entry;
-	struct hlist_node my_hash_list;
-};
-
-struct mystruct first = {
-	.key1 = key;
-	.entry = data;
-	.my_hash_list = 0;
-};
-
-
-DEFINE_HASHTABLE(a, 3);
-//hash_init(a);
-
-hash_add(a, &first.next, first.key1);
-
-int bkt;
-struct mystruct* current;
-hash_for_each_entry(a, bkt, current, /*next*/ NULL){
-	printk(KERN_INFO "data=%d is in bucket %d\n", current->entry, bkt);
-}
-
-    return 0;
-}
-/*
+    /*
 struct hlist_head {
     struct hlist_node *first;
 };
@@ -48,7 +20,44 @@ struct hlist_head {
 struct hlist_node {
     struct hlist_node *next, **pprev;
 };
+
+void __hlist_del(struct hlist_node* entry1)
+{
+	struct hlist_node *next = entry1->next;
+	struct hlist_node **pprev = entry->pprev;
+	**pprev = next;
+	if (next)
+		next->pprev = pprev;
+
+}
 */
+
+struct mystruct {
+	int id;
+	char entry[16];
+	struct hlist_node node;
+};
+
+DEFINE_HASHTABLE(a, 3);
+//hash_init(a);
+struct mystruct first = {
+	.id = key,
+	.entry = data,
+	.node = 0,
+};
+
+//hash_add(a, &first.next, first.key1);
+hash_add(a, &first.node, first.id);
+
+int key2 = 1;
+struct mystruct* obj;
+hash_for_each_possible(a, obj, node, /*next*/ key2){
+	printk("data=%s is in bucket %d\n", obj->entry, key2);
+}
+
+    return 0;
+}
+
 
 //hash_add(data_hash, "entry node", key);
 

@@ -1,0 +1,26 @@
+1.
+Go to kernel folder, then include/linux
+In file called syscalls.h, comment out the last  line where it says
+asm linkage sys_hello
+
+2. 
+Replace hello folder in kernel folder with the new one
+
+3.
+Replace userspace.c with new one
+gcc userspace.c
+./a.out
+If it returns 0 then it's good
+Dmesg to see if the correct parameters were printed
+
+4. Then recompile kernel
+In kernel folder, make menuconfig, save then exit
+I use this command to compile everything
+Depending on how many cores you can use change the 8 to 4 or whatever
+sudo make -j 8 && sudo make modules_install -j 8 && sudo make install -j 8
+
+5. Problem is in hello.c in the hello folder in kernel directory.
+Trying to use hashtable from include/linux, but don't understand how to structure nodes
+to add strings to the hashtable
+Only helpful source I found was:
+https://subscription.packtpub.com/book/hardware_and_creative/9781838558802/app04/app04lvl1sec64/kernel-hash-tables

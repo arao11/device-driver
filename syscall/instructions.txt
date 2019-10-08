@@ -24,3 +24,5 @@ Trying to use hashtable from include/linux, but don't understand how to structur
 to add strings to the hashtable
 Only helpful source I found was:
 https://subscription.packtpub.com/book/hardware_and_creative/9781838558802/app04/app04lvl1sec64/kernel-hash-tables
+
+kernelnewbies.org/FAQ/Hashtables

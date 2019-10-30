@@ -15,16 +15,17 @@ static void block_exit(void);
 
 /* Constants */
 #define NAME "blockDevice"
-#define PARTITIONS 16
-#define SECTORS 1024 /* Disk size is ~524 KB */
-#define SECTOR_SIZE 512 /* Using standard 512 byte sector size */
+#define BLK_PARTITIONS 16
+#define BLK_SECTORS 1024 /* Disk size is ~524 KB */
+#define BLK_SECTOR_SIZE 512 /* Using standard 512 byte sector size */
 
 static int majorNumber = 0;
+
+static struct request_queue *queue;
 
 /* Our private internal data structure */
 static struct blockDeviceStruct {
     unsigned long size;
-    struct request_queue *queue;
     spinlock_t lock;
     u8 *data;
     struct gendisk *gd;
@@ -41,15 +42,15 @@ static void handle_queue_request(struct request_queue *queue) {
     unsigned long numberOfBytes;
     rq = blk_fetch_request(queue);
     while (rq != NULL) {
-        if (rq->cmd_type != REQ_TYPE_FS) {
+        if (rq == NULL || rq->cmd_type != REQ_TYPE_FS) {
             printk(KERN_INFO "Skipping non FS requests\n");
             __blk_end_request_all(rq, -EIO);
             continue;
         }
         /* Starting offset position is the sector number * size of each sector */
-        startPos = blk_rq_pos(rq) * SECTOR_SIZE;
+        startPos = blk_rq_pos(rq) * BLK_SECTOR_SIZE;
         /* Number of bytes to copy starting from startPos is number of sectors * size of each sector */
-        numberOfBytes = blk_rq_cur_sectors(rq) * SECTOR_SIZE;
+        numberOfBytes = blk_rq_cur_sectors(rq) * BLK_SECTOR_SIZE;
 
         /* Check we have enough space */
         if ((startPos + numberOfBytes) >= blockDevice.size) {
@@ -79,10 +80,10 @@ static void handle_queue_request(struct request_queue *queue) {
 
 static int __init block_init(void) { 
 
-    blockDevice.size = SECTORS * SECTOR_SIZE;
+    blockDevice.size = BLK_SECTORS * BLK_SECTOR_SIZE;
     spin_lock_init(&blockDevice.lock);
 
-    blockDevice.gd = alloc_disk(PARTITIONS);
+    blockDevice.gd = alloc_disk(BLK_PARTITIONS);
     if (!blockDevice.gd) {
         printk(KERN_ERR "ERROR: Allocating %s disk\n", NAME);
         return -ENOMEM;
@@ -95,8 +96,8 @@ static int __init block_init(void) {
     }
 
     /* First we need to set up and allocate queue */
-    blockDevice.queue = blk_init_queue(handle_queue_request, &blockDevice.lock);
-    if (blockDevice.queue == NULL) {
+    queue = blk_init_queue(handle_queue_request, &blockDevice.lock);
+    if (queue == NULL) {
         printk(KERN_ERR "ERROR: Allocating %s disk block queue\n", NAME);
         vfree(blockDevice.data);
         return -ENOMEM;
@@ -104,7 +105,7 @@ static int __init block_init(void) {
 
     /* Set queue and tell kernel what size sectors we are using for our block */
     //blockDevice.queue->queuedata = &blockDevice;
-    blk_queue_logical_block_size(blockDevice.gd->queue, SECTOR_SIZE); 
+    blk_queue_logical_block_size(queue, BLK_SECTOR_SIZE); 
 
     /* Still use register_blkdev for dynamic majorNumber allocation & getting block device in /proc/devices */
     if ((majorNumber = register_blkdev(majorNumber, NAME)) <= 0) {
@@ -120,15 +121,17 @@ static int __init block_init(void) {
     blockDevice.gd->first_minor = 0;
     blockDevice.gd->fops = &block_fops;
     blockDevice.gd->private_data = &blockDevice;
-    blockDevice.gd->queue = blockDevice.queue;
+    blockDevice.gd->queue = queue;
 
     /* Name under /proc/partitions and /sys/block */
-    snprintf(blockDevice.gd->disk_name, 32, NAME); 
+    snprintf(blockDevice.gd->disk_name, 32,"%s\n", NAME); 
 
-    set_capacity(blockDevice.gd, SECTORS);
-
+    set_capacity(blockDevice.gd, 0);
     /* Add disk last since this activates disk for usage */
     add_disk(blockDevice.gd);
+
+
+    set_capacity(blockDevice.gd, BLK_SECTORS);
     return 0;
 }
 
@@ -139,8 +142,8 @@ static void __exit block_exit(void) {
     printk(KERN_ALERT "Exiting block device %s\n", NAME);
 
     /* Need to delete queue */
-    if (blockDevice.gd->queue) {
-        blk_cleanup_queue(blockDevice.queue);
+    if (queue) {
+        blk_cleanup_queue(queue);
     }
     
     del_gendisk(blockDevice.gd);

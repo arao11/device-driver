@@ -4,6 +4,7 @@
 #include <linux/genhd.h>
 #include <linux/blkdev.h>
 #include <linux/uaccess.h>
+#include <linux/hdreg.h>
 
 MODULE_LICENSE("Dual BSD/GPL");
 
@@ -31,9 +32,18 @@ static struct blockDeviceStruct {
     struct gendisk *gd;
 } blockDevice;
 
+int block_ioctl(struct block_device *blockDev, struct hd_geometry *geo) {
+	geo->start = 0;
+	geo->heads = 4;
+	geo->cylinders = (blockDevice.size & ~0x3f) >> 6;
+	geo->sectors = 16;
+
+	return 0;
+}
+
 static struct block_device_operations block_fops = {
     .owner = THIS_MODULE,
-    //TODO: implement ioctl
+    .getgeo = block_ioctl
 };
 
 static void handle_queue_request(struct request_queue *queue) {

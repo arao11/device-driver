@@ -3,6 +3,7 @@
 #include <asm/uaccess.h>
 #include <linux/module.h>
 #include <linux/moduleparam.h>
+#include <linux/cred.h>
 #include <linux/init.h>
 
 
@@ -32,12 +33,15 @@ static unsigned long procfs_buffer_size = 0;
  * /proc file
  */
 static struct proc_dir_entry *proc_file;
+
+
 /**
  * This function is called then the /proc file is read
  */
-int procfile_read(char *buffer,
-	      char **buffer_location,
-	      off_t offset, int buffer_length, int *eof, void *data)
+int procfile_read(struct file *filp,	/* see include/linux/fs.h   */
+			     char *buffer,	/* buffer to fill with data */
+			     size_t length,	/* length of the buffer     */
+			     loff_t * offset)
 {
 	static int finished = 0;
 	/*
@@ -66,32 +70,24 @@ int procfile_read(char *buffer,
 /**
  * This function is called then the /proc file is written
  */
- int procfile_write(struct file *file, const char *buffer, size_t )
- {
-	procfs_buffer_size = count;
-	if (procfs_buffer_size > BUFSIZE)
+ int procfile_write(struct file *file, const char *buffer, size_t len, loff_t * off)
+{
+	if (len > BUFSIZE)
 	{
 		procfs_buffer_size = BUFSIZE;
 	}
+	else
+	{
+		procfs_buffer_size = len;
+	}
 
-	/*write the data to teh buffer*/
 	if ( copy_from_user(procfs_buffer, buffer, procfs_buffer_size) ) {
 		return -EFAULT;
 	}
 
-	return procfs_buffer_size;
-}
-static int module_permission(struct inode *inode, int op, struct nameidata *data)
-{
-	/**
-	 *	Everybody has access to read from module, but
-	 * only root may write to it.
-	 */
-	 if (op ==4 || (op == 2 && current->euid == 0))
-	 	return 0;
+	printk(KERN_INFO "procfs_write: write %lu bytes\n", procfs_buffer_size);
 
-	/* anythign else, deny access*/
-	return -EACCES;
+	return procfs_buffer_size;
 }
 /*
  * The file is opened - we don't really care about
@@ -115,13 +111,10 @@ int procfs_close(struct inode *inode, struct file *file)
 }
 static struct file_operations myops =
 {
-	.read 	 = procfile_read,
-	.write 	 = procfile_write,
-	.open 	 = procfs_open,
-	.release = procfs_close,
-};
-static struct inode_operations Inode_ops = {
-	.permission = module_permission,	/* check for permissions */
+	 read: procfile_read,
+	 write: procfile_write,
+	 open: procfs_open,
+	 release: procfs_close
 };
 /**
  *This function is called when the module is loaded
@@ -130,23 +123,14 @@ static struct inode_operations Inode_ops = {
 int init_module()
 {
 	/* create the /proc file */
-	proc_file = create_proc_entry(PROCFS_N, 0644, NULL);
+	proc_file = proc_create(PROCFS_N, 0, NULL, &myops);
 
 	if (proc_file == NULL) {
-		remove_proc_entry(PROCFS_N, &proc_root);
+		remove_proc_entry(PROCFS_N, NULL);
 		printk(KERN_ALERT "Error: Could not initialize /proc/%s\n",
 			PROCFS_N);
 		return -ENOMEM;
 	}
-
-
-	proc_file->owner	= THIS_MODULE;
-	proc_file->proc_iops = &Inode_ops;
-	proc_file->proc_fops = &myops;
-	proc_file->mode		= S_IFREG | S_IRUGO | S_IWUSR;
-	proc_file->uid 	  	= 0;
-	proc_file->gid 		= 0;
-	proc_file->size 	= 80;
 
 	printk(KERN_INFO "/proc/%s created\n", PROCFS_N);
 	return 0;	/* everything is ok */
@@ -157,6 +141,6 @@ int init_module()
  */
 void cleanup_module()
 {
-	remove_proc_entry(PROCFS_N, &proc_root);
+	remove_proc_entry(PROCFS_N, NULL);
 	printk(KERN_INFO "/proc/%s removed\n", PROCFS_N);
 }

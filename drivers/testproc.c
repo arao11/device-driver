@@ -11,9 +11,9 @@ MODULE_AUTHOR("Joshin Kariyathu");
 
 
 // Seting the buffer size to 1024;
-#define BUFSIZE  1024
+#define BUFSIZE  2048
 // This is the name of the proc file
-#define PROCFS_N 		"buff"
+#define PROCFS_N 		"buff2k"
 
 /**
  * The buffer used to store character for this module
@@ -39,33 +39,90 @@ int procfile_read(char *buffer,
 	      char **buffer_location,
 	      off_t offset, int buffer_length, int *eof, void *data)
 {
-	int retn;
-	printk(KERN_INFO "procfile_read (/proc/%s) called\n", PROCFS_N);
-
-	if (offset > 0)
+	static int finished = 0;
+	/*
+	 * return 0 to indicate emd of file.
+	 * Processes will conitinue to read from file in an endless loop
+	 */
+	if (finished)
+	{
+		printk(KERN_INFO "procfs_read: END\n");
+		finished = 0;
 		return 0;
+	}
 
-	/* Fill the buffer and then return it */
-	memcpy(buffer, procfs_buffer, procfs_buffer_size);
-	return procfs_buffer_size;
+	finished = 1;
+	/*
+	 *	We need to copy the string from kernel's memory segm
+	 * to the memory segm of the process that called proc
+	 */
+	 if (copy_to_user(buffer, procfs_buffer, procfs_buffer_size))
+	 {
+		return -EFAULT;
+	 }
+	 printk(KERN_INFO "procfs_read: read %lu bytes\n", procfs_buffer_size);
+	 return procfs_buffer_size; /*return the number of bytes that was read*/
 }
 /**
  * This function is called then the /proc file is written
  */
- int procfile_write(struct file *file, const char *buffer, unsigned long count,
- 		   void *data)
+ int procfile_write(struct file *file, const char *buffer, size_t )
  {
-	printk( KERN_DEBUG "write handler\n");
-	return -1;
+	procfs_buffer_size = count;
+	if (procfs_buffer_size > BUFSIZE)
+	{
+		procfs_buffer_size = BUFSIZE;
+	}
+
+	/*write the data to teh buffer*/
+	if ( copy_from_user(procfs_buffer, buffer, procfs_buffer_size) ) {
+		return -EFAULT;
+	}
+
+	return procfs_buffer_size;
+}
+static int module_permission(struct inode *inode, int op, struct nameidata *data)
+{
+	/**
+	 *	Everybody has access to read from module, but
+	 * only root may write to it.
+	 */
+	 if (op ==4 || (op == 2 && current->euid == 0))
+	 	return 0;
+
+	/* anythign else, deny access*/
+	return -EACCES;
+}
+/*
+ * The file is opened - we don't really care about
+ * that, but it does mean we need to increment the
+ * module's reference count.
+ */
+int procfs_open(struct inode *inode, struct file *file)
+{
+	try_module_get(THIS_MODULE);
+	return 0;
 }
 
+/*
+ * The file is closed - again, interesting only because
+ * of the reference count.
+ */
+int procfs_close(struct inode *inode, struct file *file)
+{
+	module_put(THIS_MODULE);
+	return 0;		/* success */
+}
 static struct file_operations myops =
 {
-	.owner = THIS_MODULE,
-	.read = myread,
-	.write = mywrite,
+	.read 	 = procfile_read,
+	.write 	 = procfile_write,
+	.open 	 = procfs_open,
+	.release = procfs_close,
 };
-
+static struct inode_operations Inode_ops = {
+	.permission = module_permission,	/* check for permissions */
+};
 /**
  *This function is called when the module is loaded
  *
@@ -73,22 +130,23 @@ static struct file_operations myops =
 int init_module()
 {
 	/* create the /proc file */
-	Our_Proc_File = create_proc_entry(PROCFS_N, 0644, NULL);
+	proc_file = create_proc_entry(PROCFS_N, 0644, NULL);
 
-	if (Our_Proc_File == NULL) {
+	if (proc_file == NULL) {
 		remove_proc_entry(PROCFS_N, &proc_root);
 		printk(KERN_ALERT "Error: Could not initialize /proc/%s\n",
 			PROCFS_N);
 		return -ENOMEM;
 	}
 
-	Our_Proc_File->read_proc  = procfile_read;
-	Our_Proc_File->write_proc = procfile_write;
-	Our_Proc_File->owner 	  = THIS_MODULE;
-	Our_Proc_File->mode 	  = S_IFREG | S_IRUGO;
-	Our_Proc_File->uid 	  = 0;
-	Our_Proc_File->gid 	  = 0;
-	Our_Proc_File->size 	  = 37;
+
+	proc_file->owner	= THIS_MODULE;
+	proc_file->proc_iops = &Inode_ops;
+	proc_file->proc_fops = &myops;
+	proc_file->mode		= S_IFREG | S_IRUGO | S_IWUSR;
+	proc_file->uid 	  	= 0;
+	proc_file->gid 		= 0;
+	proc_file->size 	= 80;
 
 	printk(KERN_INFO "/proc/%s created\n", PROCFS_N);
 	return 0;	/* everything is ok */

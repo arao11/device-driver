@@ -1,3 +1,7 @@
+/**
+ * Note: When trying to write to proc file, use root
+ */
+
 #include <linux/kernel.h>
 #include <linux/proc_fs.h>
 #include <asm/uaccess.h>

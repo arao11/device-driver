@@ -48,8 +48,6 @@ static void exec_read_calls(void) {
     for (i = 0; i < READ_BUFFER_SIZE; i++) {
         struct read_call call = buffer[i];
         read(call.fd, call.buff, call.count);
-        //free(&buffer[i]);
-        //close(call.fd);
         //printf("Executing Instruction %d\n", i);
     }
     

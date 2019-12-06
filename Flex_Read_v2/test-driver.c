@@ -36,30 +36,26 @@ int main(int ac, char *av[]) {
     int iter = 2;
     while (iter > 0) {
     
-    rcalls = calloc(READ_BUFFER_SIZE, sizeof(struct read_call));
-    
-    int t;
-    for (t = 0; t < READ_BUFFER_SIZE; t++) {
-        pthread_create(&(tid[t]), NULL, &insert_read_request, NULL);
-    }
-    
-    for (t = 0; t < READ_BUFFER_SIZE; t++) {
-        pthread_join(tid[t], NULL);
-    }
-
-    //pthread_mutex_destroy(&buff_lock);
-    
-    for (t = 0; t < READ_BUFFER_SIZE; t++) {
-        struct read_call call = rcalls[t];
-        printf("Contents Read: %s\n\n", (char *)call.buff);
-        close(call.fd);
-        free(call.buff);
-        //free(&rcalls[t]);
-    }
-    
-    free(rcalls);
-    buff_index = 0;
-    iter--;
+        rcalls = calloc(READ_BUFFER_SIZE, sizeof(struct read_call));
+        
+        int t;
+        for (t = 0; t < READ_BUFFER_SIZE; t++) {
+            pthread_create(&(tid[t]), NULL, &insert_read_request, NULL);
+        }
+        for (t = 0; t < READ_BUFFER_SIZE; t++) {
+            pthread_join(tid[t], NULL);
+        }
+        
+        for (t = 0; t < READ_BUFFER_SIZE; t++) {
+            struct read_call call = rcalls[t];
+            printf("Contents Read: %s\n\n", (char *)call.buff);
+            close(call.fd);
+            free(call.buff);
+        }
+        
+        free(rcalls);
+        buff_index = 0;
+        iter--;
     }
     
     pthread_mutex_destroy(&buff_lock);

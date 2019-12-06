@@ -12,12 +12,7 @@
 
 static struct read_call * buffer;
 static int buff_index = 0;
-static sem_t read_wait;
 static pthread_mutex_t buff_lock = PTHREAD_MUTEX_INITIALIZER;
-static bool sem_is_init = false;
-//static char **paths;
-//static char **buffs;
-//static int **counts;
 
 /*
  * Inserts struct read_call into buffer. Executes read
@@ -26,11 +21,6 @@ static bool sem_is_init = false;
 int buff_insert_read(struct read_call * call) {
 
     pthread_mutex_lock(&buff_lock);
-
-    if (!sem_is_init) {
-        sem_init(&read_wait, 0, (unsigned int)READ_BUFFER_SIZE);
-        sem_is_init = true;
-    }
         
     if (buffer == NULL)
         buffer = (struct read_call*)calloc(READ_BUFFER_SIZE, sizeof(struct read_call));
@@ -42,13 +32,7 @@ int buff_insert_read(struct read_call * call) {
     if (buff_index == READ_BUFFER_SIZE)
         exec_read_calls();
     
-    if (buff_index != 0) {
-        pthread_mutex_unlock(&buff_lock);
-        sem_wait(&read_wait);
-    } else {
-        pthread_mutex_unlock(&buff_lock);
-        sem_post(&read_wait);
-    }
+    pthread_mutex_unlock(&buff_lock);
         
     pthread_t thread = pthread_self();
     printf("Thread Terminating: [%u]\n", thread);
@@ -64,9 +48,9 @@ static void exec_read_calls(void) {
     for (i = 0; i < READ_BUFFER_SIZE; i++) {
         struct read_call call = buffer[i];
         read(call.fd, call.buff, call.count);
+        //free(&buffer[i]);
         //close(call.fd);
         //printf("Executing Instruction %d\n", i);
-        //printf("Contents Read: %s\n\n", (char *)call.buff);
     }
     
     // TODO Call our syscall, syscall((void *)buffer, int length) ?
